@@ -6,15 +6,20 @@ import { ProfilePanel } from "./components/ProfilePanel";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { OptimizerPanel } from "./components/OptimizerPanel";
 import { DataPanel } from "./components/DataPanel";
+import { ConnectPanel } from "./components/ConnectPanel";
+import { normalizeFitpData, type FitpData } from "./lib/fitpConnect";
 
-type Tab = "profilo" | "storico" | "ottimizza" | "dati";
+type Tab = "profilo" | "storico" | "ottimizza" | "collega" | "dati";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "profilo", label: "👤 Profilo" },
   { id: "storico", label: "📋 Storico" },
   { id: "ottimizza", label: "🎯 Ottimizza tornei" },
+  { id: "collega", label: "🔐 Collega FITP" },
   { id: "dati", label: "🔄 Dati" },
 ];
+
+const PROFILE_KEY = "tennisat.profile";
 
 export function App() {
   const [tab, setTab] = useState<Tab>("ottimizza");
@@ -25,6 +30,35 @@ export function App() {
   );
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Applica i dati FITP (dal connector o dal file my-data.json) allo stato.
+  const applyFitpData = (data: FitpData, mode: "replace" | "merge" = "merge") => {
+    if (data.profile) setProfile((cur) => ({ ...cur, ...data.profile }));
+    if (data.matches && data.matches.length) {
+      setMatches((cur) => (mode === "replace" ? data.matches! : [...data.matches!, ...cur]));
+    }
+  };
+
+  // All'avvio, se esiste public/data/my-data.json (prodotto dal connector a
+  // build-time) e l'utente non ha ancora dati propri, assorbe profilo e storico.
+  useEffect(() => {
+    const firstRun = (() => {
+      try {
+        return localStorage.getItem(PROFILE_KEY) === null;
+      } catch {
+        return true;
+      }
+    })();
+    if (!firstRun) return;
+    fetch(`${import.meta.env.BASE_URL}data/my-data.json`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) applyFitpData(normalizeFitpData(data), "replace");
+      })
+      .catch(() => {
+        /* file opzionale: assente in assenza di connector */
+      });
+  }, []);
 
   // Carica il calendario tornei (aggiornabile via scraper a build-time).
   useEffect(() => {
@@ -100,6 +134,13 @@ export function App() {
           tournaments={tournaments}
           settings={settings}
           onSettings={setSettings}
+        />
+      )}
+      {tab === "collega" && (
+        <ConnectPanel
+          hasProfile={profile}
+          matchesCount={matches.length}
+          onData={(data, mode) => applyFitpData(data, mode)}
         />
       )}
       {tab === "dati" && (

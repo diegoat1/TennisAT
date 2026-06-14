@@ -40,6 +40,37 @@ Per ogni torneo proietta il percorso nel tabellone turno per turno:
 Le soglie di promozione sono indicative (es. ~505 punti per la 4.1) e
 modificabili in `src/data/classifications.ts`.
 
+## Collegare il proprio account FITP 🔐
+
+La scheda **Collega FITP** permette di assorbire automaticamente profilo e
+storico. Poiché FITP non ha un'API pubblica, i risultati dei singoli incontri
+sono visibili solo dopo il login e il browser non può autenticarsi su `fitp.it`
+(CORS), il collegamento avviene tramite un **connector** che usa le tue
+credenziali in modo sicuro:
+
+- **Le credenziali restano sul tuo dispositivo** (sessione del browser) e
+  vengono inviate solo al connector che configuri tu, mai a terzi né salvate
+  nel repo.
+- **Connector a build-time (consigliato)** — esegui con le credenziali come
+  variabili d'ambiente; produce `public/data/my-data.json` che l'app carica
+  all'avvio (file ignorato da git):
+
+  ```bash
+  FITP_USERNAME=... FITP_PASSWORD=... \
+  FITP_LOGIN_URL=...  FITP_PROFILE_URL=...  FITP_MATCHES_URL=... \
+  npm run fetch:me
+  ```
+
+  In GitHub Actions imposta `FITP_USERNAME`/`FITP_PASSWORD` come **Secrets** e
+  gli URL come **Variables**: il deploy li userà automaticamente.
+- **Connector come servizio** — esponi lo stesso script come endpoint HTTP
+  (`{ username, password }` → `{ profile, matches }`) e incolla il suo URL nella
+  scheda Collega FITP.
+
+> Il flusso di login e gli endpoint dell'area riservata FITP non sono pubblici:
+> `scripts/fitp/fetch-my-data.mjs` è una base da adattare allo schema reale.
+> Le credenziali non finiscono mai nel browser pubblico né nel repository.
+
 ## Dati dei tornei
 
 Il calendario vive in [`public/data/tournaments.json`](public/data/tournaments.json)

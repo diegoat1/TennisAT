@@ -6,3 +6,8 @@ dist/
 npm-debug.log*
 
 *.tsbuildinfo
+
+# Credenziali e dati personali generati dal connector FITP: mai nel repo
+.env
+.env.*
+public/data/my-data.json

@@ -29,6 +29,15 @@ jobs:
       - run: npm run scrape
         env:
           FITP_SEARCH_URL: ${{ vars.FITP_SEARCH_URL }}
+      # Connector personale: scarica profilo + storico se le credenziali sono
+      # configurate come Secrets del repo. Senza Secrets, lo step non scrive nulla.
+      - run: npm run fetch:me
+        env:
+          FITP_USERNAME: ${{ secrets.FITP_USERNAME }}
+          FITP_PASSWORD: ${{ secrets.FITP_PASSWORD }}
+          FITP_LOGIN_URL: ${{ vars.FITP_LOGIN_URL }}
+          FITP_PROFILE_URL: ${{ vars.FITP_PROFILE_URL }}
+          FITP_MATCHES_URL: ${{ vars.FITP_MATCHES_URL }}
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
