@@ -1,0 +1,54 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Aggiorna il calendario tornei dal portale FITP se e configurato un endpoint.
+      # Senza FITP_SEARCH_URL mantiene il calendario seed (vedi script).
+      - run: npm run scrape
+        env:
+          FITP_SEARCH_URL: ${{ vars.FITP_SEARCH_URL }}
+      # Connector personale: scarica profilo + storico se le credenziali sono
+      # configurate come Secrets del repo. Senza Secrets, lo step non scrive nulla.
+      - run: npm run fetch:me
+        env:
+          FITP_USERNAME: ${{ secrets.FITP_USERNAME }}
+          FITP_PASSWORD: ${{ secrets.FITP_PASSWORD }}
+          FITP_LOGIN_URL: ${{ vars.FITP_LOGIN_URL }}
+          FITP_PROFILE_URL: ${{ vars.FITP_PROFILE_URL }}
+          FITP_MATCHES_URL: ${{ vars.FITP_MATCHES_URL }}
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
